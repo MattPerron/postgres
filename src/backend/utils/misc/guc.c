@@ -117,6 +117,7 @@ extern char *default_tablespace;
 extern char *temp_tablespaces;
 extern bool ignore_checksum_failure;
 extern bool synchronize_seqscans;
+extern int perfect_estimates;
 
 #ifdef TRACE_SYNCSCAN
 extern bool trace_syncscan;
@@ -1684,6 +1685,16 @@ static struct config_int ConfigureNamesInt[] =
 		},
 		&XLogArchiveTimeout,
 		0, 0, INT_MAX / 2,
+		NULL, NULL, NULL
+	},
+	{
+		{"perfect_estimates", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Waits N seconds on connection startup after authentication."),
+			gettext_noop("This allows attaching a debugger to the process."),
+			GUC_NOT_IN_SAMPLE | GUC_UNIT_S
+		},
+		&perfect_estimates,
+		0, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 	{
