@@ -137,8 +137,8 @@ int         current_test_query = -1;
 long        matt_sizes[MATT_NUM_QUERIES][MATT_NUM_COMBS];
 bool        matt_started = false;
 char        matt_filename[MATT_NUM_QUERIES][MATT_FILENAME_LEN];
-char *      matt_folder = "/home/matt/job-formatted/";
-const char * matt_conninfo = "host=localhost dbname=matt sslmode=disable";
+char *      matt_folder = "/home/ubuntu/join-order-benchmark/";
+const char * matt_conninfo = "host=localhost dbname=ubuntu sslmode=disable";
 PGconn *matt_conn;
 PGresult *matt_res;
 

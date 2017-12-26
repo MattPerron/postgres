@@ -1,2 +1,2 @@
 #/bin/bash
-../configure --prefix=/home/matt/postgres/build/ --exec-prefix=/home/matt/postgres/build/ --with-includes=/usr/include/postgresql --with-libraries=/usr/lib/x86_64-linux-gnu LIBS='-lpq' 
+../configure --prefix=/home/ubuntu/postgres/build/ --exec-prefix=/home/ubuntu/postgres/build/ --with-includes=/usr/include/postgresql --with-libraries=/usr/lib/x86_64-linux-gnu LIBS='-lpq' 
