@@ -145,7 +145,7 @@ PGresult *matt_res;
 void get_estimate(int tables, double *num_rows){
     initialize_perfect_estimator();
     int count_tables = __builtin_popcount(tables);
-    if (count_tables > perfect_estimates){
+    if (count_tables > perfect_estimates || count_tables == 1){
         return;
     }
     if (matt_sizes[current_test_query][tables] > -1){
@@ -161,7 +161,7 @@ void get_estimate(int tables, double *num_rows){
     strcat(sqlbuffer, "SELECT COUNT(*) FROM\n");
     strcat(curr_filename, matt_folder);
     strcat(curr_filename, matt_filename[current_test_query]);
-    printf("%s\n", curr_filename);
+    //printf("%s\n", curr_filename);
     FILE * f = fopen(curr_filename, "r");
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
@@ -203,11 +203,13 @@ void get_estimate(int tables, double *num_rows){
                 *idx = 0;
             }
             for (int curr_alias = 0; curr_alias < total_tables; curr_alias++){
-                if (curr_alias == 5) printf("blah\n");
                 if (!((1 << curr_alias) & tables)){
-                    char alias_with_dot[10];
-                    sprintf(alias_with_dot, " %s.", aliases[curr_alias]);
-                    if (strstr(currline, alias_with_dot) != NULL){
+                    char space_alias_with_dot[10];
+                    char paren_alias_with_dot[10];
+                    sprintf(space_alias_with_dot, " %s.", aliases[curr_alias]);
+                    sprintf(paren_alias_with_dot, "(%s.", aliases[curr_alias]);
+                    
+                    if (strstr(currline, space_alias_with_dot) != NULL || strstr(currline, paren_alias_with_dot) != NULL){
                         include_line = false;
                         break;
                     }
@@ -246,21 +248,21 @@ void get_estimate(int tables, double *num_rows){
                 *idx = 0;
             }
             idx = strstr(currline, "AS ");
-            printf("%s\n", idx+3);
+            //printf("%s\n", idx+3);
             strcpy(aliases[total_tables], idx+3);
             total_tables++;
         }
         currline = strtok(NULL, "\n"); 
     }
     strcat(sqlbuffer, ";");
-    printf("%s\n", sqlbuffer);
+    //printf("%s\n", sqlbuffer);
     // call sql
 
     matt_res = PQexec(matt_conn, sqlbuffer);
     long num_results = 0;
     num_results = atol(PQgetvalue(matt_res, 0, 0));
     PQclear(matt_res);
-    printf("Num Results: %ld\n", num_results);
+    //printf("Num Results: %ld\n", num_results);
     matt_sizes[current_test_query][tables] = num_results;
     *num_rows = (double)num_results;
     
@@ -792,24 +794,7 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 											  path->indexquals);
     
 	}
-    /*
-    bool has_other_table = false;
-    if (path->indexclauses){
-        ListCell * curr = path->indexclauses->head;
-        while(curr){
-            RestrictInfo * curr_restr= (RestrictInfo *) curr->data.ptr_value;
-            if ((curr_restr->left_relids && bms_next_member(curr_restr->left_relids, -1) != baserelid) || (curr_restr->right_relids && bms_next_member(curr_restr->right_relids, -1) !=baserelid)){
-                has_other_table = true;
-                break;
-            }
-            curr=curr->next;
-        }
-   //     if (!has_other_table){
-     //   }
 
-    }
-    */
-    // TODO here
 	if (!enable_indexscan)
 		startup_cost += disable_cost;
 	/* we don't need to check enable_indexonlyscan; indxpath.c does that */
