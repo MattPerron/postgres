@@ -75,6 +75,7 @@
 #include <float.h>				/* for _isnan */
 #endif
 #include <math.h>
+#include <sys/mman.h>
 
 #include "access/amapi.h"
 #include "access/htup_details.h"
@@ -134,11 +135,14 @@ bool		enable_gathermerge = true;
 long        perfect_estimates = 7;
 int         current_test_query = -1;
 
-long        matt_sizes[MATT_NUM_QUERIES][MATT_NUM_COMBS];
+
+long        (*matt_sizes)[MATT_NUM_QUERIES];
+int         sizes_fd;
 bool        matt_started = false;
 char        matt_filename[MATT_NUM_QUERIES][MATT_FILENAME_LEN];
 char *      matt_folder = "/home/ubuntu/join-order-benchmark/";
 const char * matt_conninfo = "host=localhost dbname=ubuntu sslmode=disable";
+
 PGconn *matt_conn;
 PGresult *matt_res;
 
@@ -264,6 +268,7 @@ void get_estimate(int tables, double *num_rows){
     PQclear(matt_res);
     //printf("Num Results: %ld\n", num_results);
     matt_sizes[current_test_query][tables] = num_results;
+    fsync(sizes_fd);
     *num_rows = (double)num_results;
     
 
@@ -272,11 +277,26 @@ void get_estimate(int tables, double *num_rows){
 inline void initialize_perfect_estimator(){
     if (!matt_started){
         matt_started = true;
+        sizes_fd = open("/home/ubuntu/pgdata/job_sizes", O_RDWR);
+        if (sizes_fd == -1){
+            fprintf(stderr, "failed to open file\n");
+        }
+        void * matt_sizes_temp = mmap(NULL, sizeof(long)*MATT_NUM_QUERIES*MATT_NUM_COMBS, PROT_WRITE, MAP_SHARED, sizes_fd, 0);
+        if (matt_sizes_temp == MAP_FAILED){
+            fprintf(stderr, "failed to mmap\n");
+        }
+
+        
+        matt_sizes = (long (*)[MATT_NUM_QUERIES]) matt_sizes_temp;
+
+        if (matt_sizes[0][0] != -1){
         for (int query = 0; query < MATT_NUM_QUERIES; query++){
             for (int comb = 0; comb < MATT_NUM_COMBS; comb++){
                 matt_sizes[query][comb] = -1;
             }
         }
+        }
+        fsync(sizes_fd);
         matt_conn = PQconnectdb(matt_conninfo);
 
         if(PQstatus(matt_conn) != CONNECTION_OK){
