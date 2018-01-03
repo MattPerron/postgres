@@ -136,7 +136,7 @@ long        perfect_estimates = 7;
 int         current_test_query = -1;
 
 
-long        (*matt_sizes)[MATT_NUM_QUERIES];
+long        (*matt_sizes)[MATT_NUM_COMBS];
 int         sizes_fd;
 bool        matt_started = false;
 char        matt_filename[MATT_NUM_QUERIES][MATT_FILENAME_LEN];
@@ -287,7 +287,7 @@ inline void initialize_perfect_estimator(){
         }
 
         
-        matt_sizes = (long (*)[MATT_NUM_QUERIES]) matt_sizes_temp;
+        matt_sizes = (long (*)[MATT_NUM_COMBS]) matt_sizes_temp;
 
         if (matt_sizes[0][0] != -1){
         for (int query = 0; query < MATT_NUM_QUERIES; query++){
