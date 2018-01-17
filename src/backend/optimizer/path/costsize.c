@@ -149,7 +149,7 @@ PGresult *matt_res;
 void get_estimate(int tables, double *num_rows){
     initialize_perfect_estimator();
     int count_tables = __builtin_popcount(tables);
-    if (count_tables > perfect_estimates || count_tables == 1){
+    if (count_tables > perfect_estimates){
         return;
     }
     if (matt_sizes[current_test_query][tables] > -1){
@@ -803,8 +803,8 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 														  path->indexquals),
 							  extract_nonindex_conditions(path->path.param_info->ppi_clauses,
 														  path->indexquals));
-            int tables = 1 << (baserelid - 1);
-            get_estimate(tables, &(path->path.rows));
+            //int tables = 1 << (baserelid - 1);
+            //get_estimate(tables, &(path->path.rows));
 	}
 	else
 	{
