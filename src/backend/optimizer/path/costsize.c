@@ -76,6 +76,7 @@
 #endif
 #include <math.h>
 #include <sys/mman.h>
+#include <float.h>				/* for _isnan */
 
 #include "access/amapi.h"
 #include "access/htup_details.h"
@@ -2438,6 +2439,10 @@ initial_cost_nestloop(PlannerInfo *root, JoinCostWorkspace *workspace,
 		if (outer_path_rows > 1)
 			run_cost += (outer_path_rows - 1) * inner_rescan_run_cost;
 	}
+    // Matt Perron, make the cost of 
+    if (inner_path->pathtype != T_IndexScan && inner_path->pathtype != T_IndexOnlyScan){
+        run_cost = DBL_MAX/4.0;
+    }
 
 	/* CPU costs left for later */
 
