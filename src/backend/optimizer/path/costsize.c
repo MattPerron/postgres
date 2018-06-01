@@ -132,8 +132,10 @@ bool		enable_mergejoin = true;
 bool		enable_hashjoin = true;
 bool		enable_gathermerge = true;
 
-long        perfect_estimates = 7;
+long        perfect_estimates = 0;
 int         current_test_query = -1;
+int         total_num_tables = 0;
+int         reoptimized_tables = 0;
 
 
 long        (*matt_sizes)[MATT_NUM_COMBS];
@@ -148,6 +150,22 @@ PGresult *matt_res;
 
 void get_estimate(int tables, double *num_rows){
     initialize_perfect_estimator();
+    if (reoptimized_tables != 0){
+        int num_reopt = __builtin_popcount(reoptimized_tables);
+        int num_after_reopt = total_num_tables - num_reopt;
+        int temp_tables = (tables>>(total_num_tables-num_reopt-1))&1 ? reoptimized_tables : 0;
+        int index = 0;
+        for (int i = 0; i < num_after_reopt; i++){
+            while((reoptimized_tables>>index)&1){
+                index++;
+            }
+            if ((tables>>i)&1){
+                temp_tables |= 1<<i;
+            }
+            index++;
+        }
+        tables = temp_tables;
+    }
     int count_tables = __builtin_popcount(tables);
     if (count_tables > perfect_estimates){
         return;
