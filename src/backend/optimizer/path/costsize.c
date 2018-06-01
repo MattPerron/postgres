@@ -149,6 +149,7 @@ PGconn *matt_conn;
 PGresult *matt_res;
 
 void get_estimate(int tables, double *num_rows){
+    printf("in get_estimate\n");
     initialize_perfect_estimator();
     if (reoptimized_tables != 0){
         int num_reopt = __builtin_popcount(reoptimized_tables);
@@ -164,6 +165,7 @@ void get_estimate(int tables, double *num_rows){
             }
             index++;
         }
+        printf("before: %x \n after: %x \n reoptimized_tables %x", tables, temp_tables, reoptimized_tables); 
         tables = temp_tables;
     }
     int count_tables = __builtin_popcount(tables);
@@ -183,7 +185,6 @@ void get_estimate(int tables, double *num_rows){
     strcat(sqlbuffer, "SELECT COUNT(*) FROM\n");
     strcat(curr_filename, matt_folder);
     strcat(curr_filename, matt_filename[current_test_query]);
-    //printf("%s\n", curr_filename);
     FILE * f = fopen(curr_filename, "r");
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
@@ -228,8 +229,6 @@ void get_estimate(int tables, double *num_rows){
                 if (!((1 << curr_alias) & tables)){
                     char space_alias_with_dot[10];
                     char paren_alias_with_dot[10];
-                    sprintf(space_alias_with_dot, " %s.", aliases[curr_alias]);
-                    sprintf(paren_alias_with_dot, "(%s.", aliases[curr_alias]);
                     
                     if (strstr(currline, space_alias_with_dot) != NULL || strstr(currline, paren_alias_with_dot) != NULL){
                         include_line = false;
@@ -253,7 +252,6 @@ void get_estimate(int tables, double *num_rows){
             if (idx != NULL){
                 currline = idx+5;
             }
-            //printf("%s\n", currline);
             if (tables & (1 << total_tables)){
                 strcat(sqlbuffer, currline);
                 
@@ -270,21 +268,18 @@ void get_estimate(int tables, double *num_rows){
                 *idx = 0;
             }
             idx = strstr(currline, "AS ");
-            //printf("%s\n", idx+3);
             strcpy(aliases[total_tables], idx+3);
             total_tables++;
         }
         currline = strtok(NULL, "\n"); 
     }
     strcat(sqlbuffer, ";");
-    //printf("%s\n", sqlbuffer);
     // call sql
 
     matt_res = PQexec(matt_conn, sqlbuffer);
     long num_results = 0;
     num_results = atol(PQgetvalue(matt_res, 0, 0));
     PQclear(matt_res);
-    //printf("Num Results: %ld\n", num_results);
     matt_sizes[current_test_query][tables] = num_results;
     fsync(sizes_fd);
     *num_rows = (double)num_results;
