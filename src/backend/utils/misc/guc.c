@@ -119,6 +119,7 @@ extern bool ignore_checksum_failure;
 extern bool synchronize_seqscans;
 extern int perfect_estimates;
 extern int current_test_query;
+extern char table_mapping_str[12*20];
 
 #ifdef TRACE_SYNCSCAN
 extern bool trace_syncscan;
@@ -3077,6 +3078,15 @@ static struct config_real ConfigureNamesReal[] =
 
 static struct config_string ConfigureNamesString[] =
 {
+	{
+		{"table_mapping", PGC_USERSET, CLIENT_CONN_LOCALE,
+			gettext_noop("Sets the shell command that will be called to archive a WAL file."),
+			NULL
+		},
+		&table_mapping_str,
+		"",
+		NULL, NULL, NULL 
+	},
 	{
 		{"archive_command", PGC_SIGHUP, WAL_ARCHIVING,
 			gettext_noop("Sets the shell command that will be called to archive a WAL file."),

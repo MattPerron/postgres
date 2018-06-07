@@ -140,14 +140,36 @@ long        (*matt_sizes)[MATT_NUM_COMBS];
 int         sizes_fd;
 bool        matt_started = false;
 char        matt_filename[MATT_NUM_QUERIES][MATT_FILENAME_LEN];
-char *      matt_folder = "/home/ubuntu/join-order-benchmark/";
-const char * matt_conninfo = "host=localhost dbname=ubuntu sslmode=disable";
+char        table_mapping_str[12*20];
+char *      matt_folder = "/home/matt/join-order-benchmark/";
+const char * matt_conninfo = "host=localhost dbname=matt sslmode=disable";
 
 PGconn *matt_conn;
 PGresult *matt_res;
 
 void get_estimate(int tables, double *num_rows){
+    int table_mapping[20];
+    int len = 0;
+    if (tables == 0 || perfect_estimates == 0){
+        return;
+    }
     initialize_perfect_estimator();
+    char * pch = strtok(table_mapping_str, ",");
+    while (pch != NULL){
+        if (strlen(pch) == 0){
+            continue;
+        }
+        table_mapping[len] = atoi(pch);
+        printf("%s, %d\n", pch, table_mapping[len]);
+        len++;
+    }
+    int temp_tables = 0;
+    for (int i = 0; i < len; i++){
+        if ((tables>>i)&1){
+            temp_tables |= table_mapping[i];
+        }
+    }
+    tables = temp_tables;
     int count_tables = __builtin_popcount(tables);
     if (count_tables > perfect_estimates){
         return;
@@ -156,6 +178,8 @@ void get_estimate(int tables, double *num_rows){
         *num_rows = (double)matt_sizes[current_test_query][tables];
         return;
     }
+    return;
+    /*
     char aliases[20][20];
     int total_tables = 0;
     char sqlbuffer[100000];
@@ -270,14 +294,14 @@ void get_estimate(int tables, double *num_rows){
     matt_sizes[current_test_query][tables] = num_results;
     fsync(sizes_fd);
     *num_rows = (double)num_results;
-    
+    */
 
 }
 
 inline void initialize_perfect_estimator(){
     if (!matt_started){
         matt_started = true;
-        sizes_fd = open("/home/ubuntu/pgdata/job_sizes", O_RDWR);
+        sizes_fd = open("/home/matt/pgdata/job_sizes", O_RDWR);
         if (sizes_fd == -1){
             fprintf(stderr, "failed to open file\n");
         }
