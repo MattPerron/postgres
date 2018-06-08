@@ -140,7 +140,7 @@ long        (*matt_sizes)[MATT_NUM_COMBS];
 int         sizes_fd;
 bool        matt_started = false;
 char        matt_filename[MATT_NUM_QUERIES][MATT_FILENAME_LEN];
-char        table_mapping_str[12*20];
+char        table_mapping_str[30*20];
 char *      matt_folder = "/home/matt/join-order-benchmark/";
 const char * matt_conninfo = "host=localhost dbname=matt sslmode=disable";
 
@@ -148,19 +148,23 @@ PGconn *matt_conn;
 PGresult *matt_res;
 
 void get_estimate(int tables, double *num_rows){
+    char table_mapping_str_local[20*30];
     int table_mapping[20];
     int len = 0;
     if (tables == 0 || perfect_estimates == 0){
         return;
     }
     initialize_perfect_estimator();
-    char * pch = strtok(table_mapping_str, ",");
+    strcpy(table_mapping_str_local, GetConfigOption("table_mapping", false, false));
+    printf("%s\n", table_mapping_str_local);
+    char * pch = strtok(table_mapping_str_local, ",");
     while (pch != NULL){
         if (strlen(pch) == 0){
             continue;
         }
         table_mapping[len] = atoi(pch);
         printf("%s, %d\n", pch, table_mapping[len]);
+        pch = strtok (NULL, ",");
         len++;
     }
     int temp_tables = 0;
