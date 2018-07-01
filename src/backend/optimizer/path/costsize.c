@@ -137,42 +137,50 @@ int         current_test_query = -1;
 
 
 long        (*matt_sizes)[MATT_NUM_COMBS];
+int         table_mapping[20];
+int         num_tables = 0;
 int         sizes_fd;
+bool        new_table_mapping_str = false;
 bool        matt_started = false;
 char        matt_filename[MATT_NUM_QUERIES][MATT_FILENAME_LEN];
 char        table_mapping_str[30*20];
-char *      matt_folder = "/home/matt/join-order-benchmark/";
-const char * matt_conninfo = "host=localhost dbname=matt sslmode=disable";
+
+char *      matt_folder = "/data/mperron/join-order-benchmark/";
+const char * matt_conninfo = "host=localhost dbname=imdb sslmode=disable";
 
 PGconn *matt_conn;
 PGresult *matt_res;
 
 void get_estimate(int tables, double *num_rows){
     char table_mapping_str_local[20*30];
-    int table_mapping[20];
-    int len = 0;
     if (tables == 0 || perfect_estimates == 0){
         return;
     }
     initialize_perfect_estimator();
-    strcpy(table_mapping_str_local, GetConfigOption("table_mapping", false, false));
-    printf("%s\n", table_mapping_str_local);
-    char * pch = strtok(table_mapping_str_local, ",");
-    while (pch != NULL){
-        if (strlen(pch) == 0){
-            continue;
+    if (new_table_mapping_str){
+        num_tables = 0;
+        new_table_mapping_str = false;
+        strcpy(table_mapping_str_local, GetConfigOption("table_mapping", false, false));
+        //fprintf(stderr, "TableMapping: %d, %s, %d\n", current_test_query, table_mapping_str_local, tables); 
+        //fflush(stderr);
+        char * pch = strtok(table_mapping_str_local, ",");
+        while (pch != NULL){
+            if (strlen(pch) == 0){
+                continue;
+            }
+            table_mapping[num_tables] = (int) strtol(pch, NULL, 16);
+            pch = strtok (NULL, ",");
+            num_tables++;
         }
-        table_mapping[len] = atoi(pch);
-        printf("%s, %d\n", pch, table_mapping[len]);
-        pch = strtok (NULL, ",");
-        len++;
     }
     int temp_tables = 0;
-    for (int i = 0; i < len; i++){
+    for (int i = 0; i < num_tables; i++){
         if ((tables>>i)&1){
             temp_tables |= table_mapping[i];
         }
     }
+    //fprintf(stderr, "Estimating %d, %d, %d\n", current_test_query, tables, temp_tables); 
+    //fflush(stderr);
     tables = temp_tables;
     int count_tables = __builtin_popcount(tables);
     if (count_tables > perfect_estimates){
@@ -305,7 +313,7 @@ void get_estimate(int tables, double *num_rows){
 inline void initialize_perfect_estimator(){
     if (!matt_started){
         matt_started = true;
-        sizes_fd = open("/home/matt/pgdata/job_sizes", O_RDWR);
+        sizes_fd = open("/data/mperron/pgdata/job_sizes", O_RDWR);
         if (sizes_fd == -1){
             fprintf(stderr, "failed to open file\n");
         }

@@ -120,6 +120,7 @@ extern bool synchronize_seqscans;
 extern int perfect_estimates;
 extern int current_test_query;
 extern char table_mapping_str[12*20];
+extern bool new_table_mapping_str;
 
 #ifdef TRACE_SYNCSCAN
 extern bool trace_syncscan;
@@ -805,6 +806,15 @@ static const unit_conversion time_unit_conversion_table[] =
 
 static struct config_bool ConfigureNamesBool[] =
 {
+	{
+		{"new_table_mapping_str", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enables the planner's use of sequential-scan plans."),
+			NULL
+		},
+		&new_table_mapping_str,
+		false,
+		NULL, NULL, NULL
+	},
 	{
 		{"enable_seqscan", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the planner's use of sequential-scan plans."),
@@ -3081,7 +3091,8 @@ static struct config_string ConfigureNamesString[] =
 	{
 		{"table_mapping", PGC_USERSET, CLIENT_CONN_LOCALE,
 			gettext_noop("Sets the shell command that will be called to archive a WAL file."),
-			NULL
+			NULL,
+            GUC_IS_NAME
 		},
 		&table_mapping_str,
 		"",
