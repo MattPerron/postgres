@@ -97,7 +97,6 @@
 #include "utils/selfuncs.h"
 #include "utils/spccache.h"
 #include "utils/tuplesort.h"
-#include <libpq-fe.h>
 #define MATT_NUM_QUERIES 113
 #define MATT_NUM_COMBS 150000
 #define MATT_FILENAME_LEN 8
@@ -145,12 +144,6 @@ bool        matt_started = false;
 char        matt_filename[MATT_NUM_QUERIES][MATT_FILENAME_LEN];
 char        table_mapping_str[30*20];
 
-char *      matt_folder = "/data/mperron/join-order-benchmark/";
-const char * matt_conninfo = "host=localhost dbname=imdb sslmode=disable";
-
-PGconn *matt_conn;
-PGresult *matt_res;
-
 void get_estimate(int tables, double *num_rows){
     char table_mapping_str_local[20*30];
     if (tables == 0 || perfect_estimates == 0){
@@ -191,129 +184,12 @@ void get_estimate(int tables, double *num_rows){
         return;
     }
     return;
-    /*
-    char aliases[20][20];
-    int total_tables = 0;
-    char sqlbuffer[100000];
-    char curr_filename[100];
-    curr_filename[0] = 0;
-    sqlbuffer[0] = 0;
-    strcat(sqlbuffer, "SELECT COUNT(*) FROM\n");
-    strcat(curr_filename, matt_folder);
-    strcat(curr_filename, matt_filename[current_test_query]);
-    //printf("%s\n", curr_filename);
-    FILE * f = fopen(curr_filename, "r");
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char filecontents[100000];
-    fread(filecontents, fsize, 1, f);
-    fclose(f);
-    filecontents[fsize] = 0;
-    bool fromfound = false;
-    bool wherefound = false;
-    char * currline = strtok(filecontents, "\n");
-    char * idx;
-    bool include_line = true;
-    int included_tables = 0;
-    while(currline != NULL){
-        if (strstr(currline, "FROM") != NULL) fromfound = true;
-        if (strstr(currline, "WHERE") != NULL) {
-            strcat(sqlbuffer, "WHERE true\n");
-            wherefound = true;
-        }
-        if (wherefound) {
-            bool add_and = false;
-            idx = strstr(currline, "WHERE");
-            if (idx != NULL){
-                currline = idx+5;
-                add_and = true;
-                include_line = true;
-            }
-            idx = strstr(currline, "AND");
-            if (idx != NULL){
-                include_line = true;
-            }
-            idx = strstr(currline, ";");
-            if (idx != NULL){
-                *idx = 0;
-            }
-            idx = strstr(currline, "\n");
-            if (idx != NULL){
-                *idx = 0;
-            }
-            for (int curr_alias = 0; curr_alias < total_tables; curr_alias++){
-                if (!((1 << curr_alias) & tables)){
-                    char space_alias_with_dot[10];
-                    char paren_alias_with_dot[10];
-                    sprintf(space_alias_with_dot, " %s.", aliases[curr_alias]);
-                    sprintf(paren_alias_with_dot, "(%s.", aliases[curr_alias]);
-                    
-                    if (strstr(currline, space_alias_with_dot) != NULL || strstr(currline, paren_alias_with_dot) != NULL){
-                        include_line = false;
-                        break;
-                    }
-                } 
-            }
-            if (add_and && include_line){
-                strcat(sqlbuffer, "AND ");
-            }
-            if (include_line){
-                strcat(sqlbuffer, currline);
-            }
-        }else if (fromfound){
-            // set aliases
-            idx = strstr(currline, ",");
-            if (idx != NULL){
-                *idx = 0;
-            }
-            idx = strstr(currline, "FROM");
-            if (idx != NULL){
-                currline = idx+5;
-            }
-            //printf("%s\n", currline);
-            if (tables & (1 << total_tables)){
-                strcat(sqlbuffer, currline);
-                
-                included_tables++;
-                if (included_tables < count_tables){
-                    strcat(sqlbuffer, ",");
-                }
-                strcat(sqlbuffer, "\n");
-                   
-                    
-            }
-            idx = strstr(currline, "\n");
-            if (idx != NULL){
-                *idx = 0;
-            }
-            idx = strstr(currline, "AS ");
-            //printf("%s\n", idx+3);
-            strcpy(aliases[total_tables], idx+3);
-            total_tables++;
-        }
-        currline = strtok(NULL, "\n"); 
-    }
-    strcat(sqlbuffer, ";");
-    //printf("%s\n", sqlbuffer);
-    // call sql
-
-    matt_res = PQexec(matt_conn, sqlbuffer);
-    long num_results = 0;
-    num_results = atol(PQgetvalue(matt_res, 0, 0));
-    PQclear(matt_res);
-    //printf("Num Results: %ld\n", num_results);
-    matt_sizes[current_test_query][tables] = num_results;
-    fsync(sizes_fd);
-    *num_rows = (double)num_results;
-    */
-
 }
 
 inline void initialize_perfect_estimator(){
     if (!matt_started){
         matt_started = true;
-        sizes_fd = open("/data/mperron/pgdata/job_sizes", O_RDWR);
+        sizes_fd = open("/home/matt/pgdata/job_sizes", O_RDWR);
         if (sizes_fd == -1){
             fprintf(stderr, "failed to open file\n");
         }
@@ -333,126 +209,6 @@ inline void initialize_perfect_estimator(){
         }
         }
         fsync(sizes_fd);
-        matt_conn = PQconnectdb(matt_conninfo);
-
-        if(PQstatus(matt_conn) != CONNECTION_OK){
-            fprintf(stderr, "Connection to database failed: %s", PQerrorMessage(matt_conn));
-            exit(1);
-        }
-
-        strcpy(matt_filename[0], "1a.sql");
-        strcpy(matt_filename[1], "1b.sql");
-        strcpy(matt_filename[2], "1c.sql");
-        strcpy(matt_filename[3], "1d.sql");
-        strcpy(matt_filename[4], "2a.sql");
-        strcpy(matt_filename[5], "2b.sql");
-        strcpy(matt_filename[6], "2c.sql");
-        strcpy(matt_filename[7], "2d.sql");
-        strcpy(matt_filename[8], "3a.sql");
-        strcpy(matt_filename[9], "3b.sql");
-        strcpy(matt_filename[10], "3c.sql");
-        strcpy(matt_filename[11], "4a.sql");
-        strcpy(matt_filename[12], "4b.sql");
-        strcpy(matt_filename[13], "4c.sql");
-        strcpy(matt_filename[14], "5a.sql");
-        strcpy(matt_filename[15], "5b.sql");
-        strcpy(matt_filename[16], "5c.sql");
-        strcpy(matt_filename[17], "6a.sql");
-        strcpy(matt_filename[18], "6b.sql");
-        strcpy(matt_filename[19], "6c.sql");
-        strcpy(matt_filename[20], "6d.sql");
-        strcpy(matt_filename[21], "6e.sql");
-        strcpy(matt_filename[22], "6f.sql");
-        strcpy(matt_filename[23], "7a.sql");
-        strcpy(matt_filename[24], "7b.sql");
-        strcpy(matt_filename[25], "7c.sql");
-        strcpy(matt_filename[26], "8a.sql");
-        strcpy(matt_filename[27], "8b.sql");
-        strcpy(matt_filename[28], "8c.sql");
-        strcpy(matt_filename[29], "8d.sql");
-        strcpy(matt_filename[30], "9a.sql");
-        strcpy(matt_filename[31], "9b.sql");
-        strcpy(matt_filename[32], "9c.sql");
-        strcpy(matt_filename[33], "9d.sql");
-        strcpy(matt_filename[34], "10a.sql");
-        strcpy(matt_filename[35], "10b.sql");
-        strcpy(matt_filename[36], "10c.sql");
-        strcpy(matt_filename[37], "11a.sql");
-        strcpy(matt_filename[38], "11b.sql");
-        strcpy(matt_filename[39], "11c.sql");
-        strcpy(matt_filename[40], "11d.sql");
-        strcpy(matt_filename[41], "12a.sql");
-        strcpy(matt_filename[42], "12b.sql");
-        strcpy(matt_filename[43], "12c.sql");
-        strcpy(matt_filename[44], "13a.sql");
-        strcpy(matt_filename[45], "13b.sql");
-        strcpy(matt_filename[46], "13c.sql");
-        strcpy(matt_filename[47], "13d.sql");
-        strcpy(matt_filename[48], "14a.sql");
-        strcpy(matt_filename[49], "14b.sql");
-        strcpy(matt_filename[50], "14c.sql");
-        strcpy(matt_filename[51], "15a.sql");
-        strcpy(matt_filename[52], "15b.sql");
-        strcpy(matt_filename[53], "15c.sql");
-        strcpy(matt_filename[54], "15d.sql");
-        strcpy(matt_filename[55], "16a.sql");
-        strcpy(matt_filename[56], "16b.sql");
-        strcpy(matt_filename[57], "16c.sql");
-        strcpy(matt_filename[58], "16d.sql");
-        strcpy(matt_filename[59], "17a.sql");
-        strcpy(matt_filename[60], "17b.sql");
-        strcpy(matt_filename[61], "17c.sql");
-        strcpy(matt_filename[62], "17d.sql");
-        strcpy(matt_filename[63], "17e.sql");
-        strcpy(matt_filename[64], "17f.sql");
-        strcpy(matt_filename[65], "18a.sql");
-        strcpy(matt_filename[66], "18b.sql");
-        strcpy(matt_filename[67], "18c.sql");
-        strcpy(matt_filename[68], "19a.sql");
-        strcpy(matt_filename[69], "19b.sql");
-        strcpy(matt_filename[70], "19c.sql");
-        strcpy(matt_filename[71], "19d.sql");
-        strcpy(matt_filename[72], "20a.sql");
-        strcpy(matt_filename[73], "20b.sql");
-        strcpy(matt_filename[74], "20c.sql");
-        strcpy(matt_filename[75], "21a.sql");
-        strcpy(matt_filename[76], "21b.sql");
-        strcpy(matt_filename[77], "21c.sql");
-        strcpy(matt_filename[78], "22a.sql");
-        strcpy(matt_filename[79], "22b.sql");
-        strcpy(matt_filename[80], "22c.sql");
-        strcpy(matt_filename[81], "22d.sql");
-        strcpy(matt_filename[82], "23a.sql");
-        strcpy(matt_filename[83], "23b.sql");
-        strcpy(matt_filename[84], "23c.sql");
-        strcpy(matt_filename[85], "24a.sql");
-        strcpy(matt_filename[86], "24b.sql");
-        strcpy(matt_filename[87], "25a.sql");
-        strcpy(matt_filename[88], "25b.sql");
-        strcpy(matt_filename[89], "25c.sql");
-        strcpy(matt_filename[90], "26a.sql");
-        strcpy(matt_filename[91], "26b.sql");
-        strcpy(matt_filename[92], "26c.sql");
-        strcpy(matt_filename[93], "27a.sql");
-        strcpy(matt_filename[94], "27b.sql");
-        strcpy(matt_filename[95], "27c.sql");
-        strcpy(matt_filename[96], "28a.sql");
-        strcpy(matt_filename[97], "28b.sql");
-        strcpy(matt_filename[98], "28c.sql");
-        strcpy(matt_filename[99], "29a.sql");
-        strcpy(matt_filename[100], "29b.sql");
-        strcpy(matt_filename[101], "29c.sql");
-        strcpy(matt_filename[102], "30a.sql");
-        strcpy(matt_filename[103], "30b.sql");
-        strcpy(matt_filename[104], "30c.sql");
-        strcpy(matt_filename[105], "31a.sql");
-        strcpy(matt_filename[106], "31b.sql");
-        strcpy(matt_filename[107], "31c.sql");
-        strcpy(matt_filename[108], "32a.sql");
-        strcpy(matt_filename[109], "32b.sql");
-        strcpy(matt_filename[110], "33a.sql");
-        strcpy(matt_filename[111], "33b.sql");
-        strcpy(matt_filename[112], "33c.sql");
     }
 }
 
